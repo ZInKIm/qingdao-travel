@@ -273,7 +273,7 @@ async function init(){
     ]);
     // 체크리스트 비어있으면 기본값 삽입
     if (!checklist.length) {
-      for (let i=0; i<DEFAULT_CHK.items.length; i++) {
+      for (let i=0; i<DEFAULT_CHK.length; i++) {
         await api('checklist','POST',{...DEFAULT_CHK[i], done:false, sort_order:i});
       }
       checklist = await api('checklist');
