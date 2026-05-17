@@ -209,7 +209,8 @@ header .sub { font-size: 11px; color: #999; margin-top: 1px; }
 <div class="toast" id="toast"></div>
 
 <script>
-const API = '/api';
+// API helper — table을 쿼리로 직접 지정
+const API = '/api/spots';
 const DAYS  = [{key:'24',label:'5월 24일 (일)'},{key:'25',label:'5월 25일 (월)'},{key:'26',label:'5월 26일 (화)'},{key:'27',label:'5월 27일 (수)'}];
 const TIMES = [{key:'오전',label:'오전',sub:'09:00~12:00'},{key:'오후',label:'오후',sub:'12:00~17:00'},{key:'저녁',label:'저녁',sub:'17:00~21:00'},{key:'밤',label:'밤',sub:'21:00~24:00'},{key:'새벽',label:'새벽',sub:'00:00~06:00'}];
 const MAX_SLOT = 3;
@@ -246,7 +247,13 @@ function saveFavs(){ localStorage.setItem('favIds',JSON.stringify([...favIds]));
 
 // ── API helpers ───────────────────────────────────────
 async function api(path, method='GET', body=null){
-  const res = await fetch(`${API}/${path}`, {
+  // path 예: 'spots', 'spots/3', 'schedule', 'checklist/2'
+  const parts = path.split('/');
+  const table = parts[0];
+  const id    = parts[1] || null;
+  let url = `${API}?table=${table}`;
+  if (id) url += `&id=${id}`;
+  const res = await fetch(url, {
     method,
     headers: {'Content-Type':'application/json'},
     body: body ? JSON.stringify(body) : null,
