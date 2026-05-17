@@ -1,5 +1,10 @@
 {
   "rewrites": [
-    { "source": "/api/:path*", "destination": "/api/spots?table=:path*" }
+    { "source": "/api/spots/:id", "destination": "/api/spots?table=spots&id=:id" },
+    { "source": "/api/spots", "destination": "/api/spots?table=spots" },
+    { "source": "/api/schedule/:id", "destination": "/api/spots?table=schedule&id=:id" },
+    { "source": "/api/schedule", "destination": "/api/spots?table=schedule" },
+    { "source": "/api/checklist/:id", "destination": "/api/spots?table=checklist&id=:id" },
+    { "source": "/api/checklist", "destination": "/api/spots?table=checklist" }
   ]
 }
