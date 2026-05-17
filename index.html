@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>칭다오 여행</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, 'Malgun Gothic', sans-serif; background: #f5f5f5; color: #1a1a1a; }
+
+header { background: white; border-bottom: 1px solid #eee; padding: 0.875rem 1.25rem; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 20; }
+header h1 { font-size: 17px; font-weight: 700; }
+header .sub { font-size: 11px; color: #999; margin-top: 1px; }
+.header-actions { display: flex; gap: 6px; }
+.top-btn { padding: 6px 12px; border-radius: 8px; font-size: 12px; cursor: pointer; border: 1px solid #ddd; background: white; font-family: inherit; }
+.top-btn.primary { background: #1a1a1a; color: white; border-color: #1a1a1a; }
+
+.tab-bar { display: flex; background: white; border-bottom: 1px solid #eee; position: sticky; top: 53px; z-index: 19; overflow-x: auto; scrollbar-width: none; }
+.tab-bar::-webkit-scrollbar { display: none; }
+.tab-bar button { flex: 1; min-width: 64px; padding: 11px 4px; font-size: 12px; font-weight: 600; border: none; background: none; cursor: pointer; color: #aaa; border-bottom: 2px solid transparent; transition: all .15s; font-family: inherit; white-space: nowrap; }
+.tab-bar button.active { color: #1a1a1a; border-bottom-color: #1a1a1a; }
+.tab-bar button.fav-tab.active { color: #e53e3e; border-bottom-color: #e53e3e; }
+.tab-bar button.sch-tab.active { color: #0066cc; border-bottom-color: #0066cc; }
+.tab-bar button.chk-tab.active { color: #2d8a4e; border-bottom-color: #2d8a4e; }
+.pill { font-size: 10px; background: #e53e3e; color: white; border-radius: 999px; padding: 1px 5px; margin-left: 2px; vertical-align: middle; }
+.pill.blue { background: #0066cc; }
+.pill.green { background: #2d8a4e; }
+
+.container { max-width: 720px; margin: 0 auto; padding: 1rem; }
+
+.filter-section { margin-bottom: 1rem; }
+.filter-row { display: flex; gap: 5px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.filter-row::-webkit-scrollbar { display: none; }
+.filter-row + .filter-row { margin-top: 6px; }
+.filter-row.area-row button { padding: 5px 13px; border-radius: 999px; border: 1px solid #ddd; background: white; font-size: 12px; cursor: pointer; color: #555; font-family: inherit; white-space: nowrap; flex-shrink: 0; }
+.filter-row.area-row button.active { background: #1a1a1a; color: white; border-color: #1a1a1a; }
+.filter-row.cat-row button { padding: 4px 11px; border-radius: 999px; border: 1px solid #eee; background: #f8f8f8; font-size: 11px; cursor: pointer; color: #777; font-family: inherit; white-space: nowrap; flex-shrink: 0; }
+.filter-row.cat-row button.active { background: #555; color: white; border-color: #555; }
+.result-count { font-size: 11px; color: #aaa; margin-bottom: 8px; }
+
+.spot-list { display: grid; gap: 8px; }
+.spot-card { background: white; border-radius: 12px; border: 1px solid #eee; padding: 0.875rem 1rem; }
+.spot-card.is-fav { border-color: #ffd0d0; }
+.spot-card .top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.spot-card .name { font-size: 14px; font-weight: 700; }
+.spot-card .cn { font-size: 11px; color: #999; margin-top: 1px; }
+.spot-card .meta { display: flex; align-items: center; gap: 5px; margin-top: 5px; flex-wrap: wrap; }
+.badge { font-size: 10px; padding: 2px 8px; border-radius: 999px; }
+.badge.cat { background: #f0f0f0; color: #555; }
+.badge.area { background: #e8f0fe; color: #1a56db; font-weight: 600; }
+.stars { color: #f5a623; font-size: 12px; }
+.note { font-size: 12px; color: #666; margin-top: 6px; line-height: 1.5; }
+.card-links { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 5px; }
+.map-link { font-size: 11px; color: #1a73e8; text-decoration: none; }
+.blog-link { font-size: 11px; color: #03c75a; text-decoration: none; }
+.card-actions { display: flex; gap: 3px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+.icon-btn { background: none; border: 1px solid #eee; border-radius: 7px; padding: 4px 7px; cursor: pointer; font-size: 13px; color: #888; transition: all .15s; }
+.icon-btn:hover { background: #f5f5f5; }
+.icon-btn.danger:hover { background: #fff0f0; color: #e53e3e; border-color: #e53e3e; }
+.icon-btn.fav-btn.on { border-color: #ffd0d0; background: #fff5f5; }
+.sch-btn { background: none; border: 1px solid #c0d8f0; border-radius: 7px; padding: 4px 7px; cursor: pointer; font-size: 11px; color: #0066cc; font-family: inherit; }
+.sch-btn:hover { background: #e8f2fc; }
+
+.empty { text-align: center; padding: 2.5rem; color: #bbb; font-size: 13px; }
+.loading { text-align: center; padding: 2.5rem; color: #bbb; font-size: 13px; }
+
+.sch-popup { display: none; margin-top: 8px; padding: 10px; background: #f0f7ff; border-radius: 8px; border: 1px solid #c0d8f0; }
+.sch-popup.open { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.sch-popup select { padding: 6px 8px; border: 1px solid #c0d8f0; border-radius: 6px; font-size: 12px; font-family: inherit; background: white; }
+.sch-popup .confirm-btn { padding: 6px 12px; border-radius: 6px; font-size: 12px; font-family: inherit; cursor: pointer; background: #0066cc; color: white; border: none; }
+.sch-popup .cancel-btn { padding: 6px 10px; border-radius: 6px; font-size: 12px; font-family: inherit; cursor: pointer; background: white; border: 1px solid #ddd; color: #555; }
+
+/* 스케줄 */
+.day-section { margin-bottom: 1.5rem; }
+.day-label { font-size: 14px; font-weight: 700; margin-bottom: .75rem; padding-bottom: 6px; border-bottom: 2px solid #eee; }
+.time-slots { display: grid; gap: 6px; }
+.time-slot { background: white; border-radius: 10px; border: 1px solid #eee; overflow: hidden; }
+.slot-head { display: flex; align-items: center; justify-content: space-between; padding: 7px 12px; background: #fafafa; border-bottom: 1px solid #f0f0f0; }
+.slot-label { font-size: 12px; font-weight: 700; color: #444; }
+.slot-count { font-size: 11px; color: #aaa; }
+.slot-items { padding: 6px 8px; display: grid; gap: 5px; min-height: 34px; }
+.slot-item { display: flex; align-items: center; justify-content: space-between; padding: 6px 8px; background: #f0f6ff; border-radius: 6px; border: 1px solid #dae6f8; }
+.slot-item .sname { font-size: 13px; font-weight: 600; }
+.slot-item .scn { font-size: 10px; color: #999; }
+.slot-item .scat { font-size: 10px; padding: 1px 6px; border-radius: 999px; background: #e0eaff; color: #3355aa; }
+.slot-item .sarea { font-size: 10px; padding: 1px 6px; border-radius: 999px; background: #e8f5e9; color: #2d6a4f; margin-left: 3px; }
+.slot-item .sdel { background: none; border: none; color: #ccc; cursor: pointer; font-size: 14px; padding: 0 2px; }
+.slot-item .sdel:hover { color: #e53e3e; }
+.slot-empty { font-size: 12px; color: #ccc; text-align: center; padding: 6px; }
+.slot-full { font-size: 11px; color: #e53e3e; text-align: center; padding: 2px; }
+
+/* 체크리스트 */
+.chk-section { margin-bottom: 1.25rem; }
+.chk-section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.chk-section-title { font-size: 13px; font-weight: 700; color: #333; }
+.chk-section-progress { font-size: 11px; color: #999; }
+.chk-items { display: grid; gap: 5px; }
+.chk-item { display: flex; align-items: center; gap: 10px; background: white; border-radius: 10px; border: 1px solid #eee; padding: 10px 12px; }
+.chk-item.done { background: #f8fff8; border-color: #c8e6c9; }
+.chk-item.done .chk-text { text-decoration: line-through; color: #aaa; }
+.chk-item.done .chk-sub { text-decoration: line-through; color: #ccc; }
+.chk-checkbox { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #ddd; background: white; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 12px; transition: all .15s; }
+.chk-checkbox.checked { background: #2d8a4e; border-color: #2d8a4e; color: white; }
+.chk-content { flex: 1; min-width: 0; }
+.chk-text { font-size: 13px; font-weight: 600; }
+.chk-sub { font-size: 11px; color: #888; margin-top: 1px; }
+.chk-del { background: none; border: none; color: #ddd; cursor: pointer; font-size: 15px; padding: 0 2px; flex-shrink: 0; }
+.chk-del:hover { color: #e53e3e; }
+.chk-add-row { display: flex; gap: 6px; margin-top: 8px; }
+.chk-add-row input { flex: 1; padding: 8px 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; font-family: inherit; outline: none; background: white; }
+.chk-add-row input:focus { border-color: #2d8a4e; }
+.chk-add-row select { padding: 8px 8px; border: 1px solid #ddd; border-radius: 8px; font-size: 12px; font-family: inherit; background: white; }
+.chk-add-row button { padding: 8px 14px; background: #2d8a4e; color: white; border: none; border-radius: 8px; font-size: 12px; cursor: pointer; font-family: inherit; }
+.progress-bar { height: 4px; background: #eee; border-radius: 999px; margin-bottom: 1rem; overflow: hidden; }
+.progress-fill { height: 100%; background: #2d8a4e; border-radius: 999px; transition: width .3s; }
+
+/* Modal */
+.overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; align-items: center; justify-content: center; padding: 1rem; }
+.overlay.open { display: flex; }
+.modal { background: white; border-radius: 16px; padding: 1.5rem; width: 100%; max-width: 440px; max-height: 90vh; overflow-y: auto; }
+.modal h2 { font-size: 15px; font-weight: 700; margin-bottom: 1rem; }
+.form-grid { display: grid; gap: 10px; }
+.form-grid label { font-size: 11px; color: #888; display: block; margin-bottom: 3px; }
+.form-grid input, .form-grid select, .form-grid textarea { width: 100%; padding: 8px 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; font-family: inherit; outline: none; background: white; color: #1a1a1a; }
+.form-grid input:focus, .form-grid select:focus, .form-grid textarea:focus { border-color: #1a1a1a; }
+.form-grid textarea { resize: vertical; min-height: 60px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 1rem; }
+.btn { padding: 8px 16px; border-radius: 8px; font-size: 13px; cursor: pointer; border: 1px solid #ddd; background: white; font-family: inherit; }
+.btn.primary { background: #1a1a1a; color: white; border-color: #1a1a1a; }
+
+.toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%); background: #1a1a1a; color: white; padding: 9px 18px; border-radius: 999px; font-size: 12px; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 200; white-space: nowrap; }
+.toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>📍 칭다오 여행</h1>
+    <div class="sub">5월 24일(일) ~ 27일(수) · 青岛</div>
+  </div>
+  <div class="header-actions">
+    <button class="top-btn" onclick="exportHTML()">⬇ 저장</button>
+    <button class="top-btn primary" onclick="openAdd()">+ 추가</button>
+  </div>
+</header>
+
+<div class="tab-bar">
+  <button class="active" onclick="switchTab('all')">전체</button>
+  <button class="fav-tab" onclick="switchTab('fav')">⭐ 즐겨찾기 <span class="pill" id="favCount">0</span></button>
+  <button class="sch-tab" onclick="switchTab('sch')">📅 스케줄 <span class="pill blue" id="schCount">0</span></button>
+  <button class="chk-tab" onclick="switchTab('chk')">✅ 준비물 <span class="pill green" id="chkCount">0</span></button>
+</div>
+
+<div class="container">
+  <div id="filterSection" class="filter-section">
+    <div class="filter-row area-row" id="areaBar">
+      <button class="active" data-area="전체" onclick="filterArea('전체')">전체</button>
+      <button data-area="구시가" onclick="filterArea('구시가')">🏛 구시가</button>
+      <button data-area="오사광장권" onclick="filterArea('오사광장권')">🌊 오사광장</button>
+      <button data-area="타이동" onclick="filterArea('타이동')">🍺 타이동</button>
+      <button data-area="팔대관" onclick="filterArea('팔대관')">🌿 팔대관</button>
+      <button data-area="라오산" onclick="filterArea('라오산')">⛰ 라오산</button>
+      <button data-area="외곽" onclick="filterArea('외곽')">🚌 외곽</button>
+      <button data-area="기타" onclick="filterArea('기타')">📌 기타</button>
+    </div>
+    <div class="filter-row cat-row" id="catBar">
+      <button class="active" data-cat="전체" onclick="filterCat('전체')">전체</button>
+      <button data-cat="관광지" onclick="filterCat('관광지')">🏛 관광지</button>
+      <button data-cat="맛집" onclick="filterCat('맛집')">🍜 맛집</button>
+      <button data-cat="카페" onclick="filterCat('카페')">☕ 카페</button>
+      <button data-cat="쇼핑" onclick="filterCat('쇼핑')">🛍 쇼핑</button>
+      <button data-cat="숙소" onclick="filterCat('숙소')">🏨 숙소</button>
+      <button data-cat="기타" onclick="filterCat('기타')">📌 기타</button>
+    </div>
+  </div>
+  <div class="result-count" id="resultCount"></div>
+  <div id="spotList" class="spot-list"><div class="loading">불러오는 중...</div></div>
+</div>
+
+<div class="overlay" id="overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <h2 id="modalTitle">스팟 추가</h2>
+    <div class="form-grid">
+      <div><label>장소 이름 *</label><input id="fName" placeholder="ex. 잔교" /></div>
+      <div><label>중국어 이름</label><input id="fCn" placeholder="ex. 栈桥" /></div>
+      <div class="form-row">
+        <div><label>카테고리</label>
+          <select id="fCat"><option>맛집</option><option>관광지</option><option>카페</option><option>쇼핑</option><option>숙소</option><option>기타</option></select>
+        </div>
+        <div><label>지역</label>
+          <select id="fArea"><option>구시가</option><option>오사광장권</option><option>타이동</option><option>팔대관</option><option>라오산</option><option>외곽</option><option>기타</option></select>
+        </div>
+      </div>
+      <div><label>별점</label>
+        <select id="fStars"><option value="5">★★★★★</option><option value="4">★★★★☆</option><option value="3">★★★☆☆</option><option value="2">★★☆☆☆</option><option value="1">★☆☆☆☆</option></select>
+      </div>
+      <div><label>바이두 지도 링크</label><input id="fMap" placeholder="https://..." /></div>
+      <div><label>메모</label><textarea id="fNote" placeholder="영업시간, 추천 메뉴 등"></textarea></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()">취소</button>
+      <button class="btn primary" onclick="saveSpot()">저장</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = '/api';
+const DAYS  = [{key:'24',label:'5월 24일 (일)'},{key:'25',label:'5월 25일 (월)'},{key:'26',label:'5월 26일 (화)'},{key:'27',label:'5월 27일 (수)'}];
+const TIMES = [{key:'오전',label:'오전',sub:'09:00~12:00'},{key:'오후',label:'오후',sub:'12:00~17:00'},{key:'저녁',label:'저녁',sub:'17:00~21:00'},{key:'밤',label:'밤',sub:'21:00~24:00'},{key:'새벽',label:'새벽',sub:'00:00~06:00'}];
+const MAX_SLOT = 3;
+const CHK_CATS = ['📱 앱 설치','💳 결제·환전','📡 통신','🧳 서류·짐','📋 현지 주의'];
+const DEFAULT_CHK = [
+  {cat:'📱 앱 설치',text:'VPN 앱 설치 및 테스트',sub:'ExpressVPN / NordVPN — 한국에서 미리 설치·결제'},
+  {cat:'📱 앱 설치',text:'고덕지도 (高德地图) 설치',sub:'중국 최고 지도앱. 오프라인 지도 미리 다운'},
+  {cat:'📱 앱 설치',text:'바이두지도 (百度地图) 설치',sub:'고덕 백업용'},
+  {cat:'📱 앱 설치',text:'알리페이 설치 및 카드 등록',sub:'트래블월렛·트래블로그 카드 연동 권장'},
+  {cat:'📱 앱 설치',text:'디디 (滴滴) 설치',sub:'중국판 카카오T. 한국 번호로 가입 가능'},
+  {cat:'📱 앱 설치',text:'파파고 오프라인 언어팩 다운',sub:'중국어 오프라인팩 미리 다운로드'},
+  {cat:'📱 앱 설치',text:'위챗 (WeChat) 설치',sub:'현지인 연락·결제 보조용'},
+  {cat:'💳 결제·환전',text:'트래블월렛 or 트래블로그 카드 준비',sub:'알리페이에 연동해 위안화 수수료 절감'},
+  {cat:'💳 결제·환전',text:'비상용 위안화 현금 준비',sub:'전체 경비의 10~20% 소액권으로'},
+  {cat:'💳 결제·환전',text:'해외 결제 가능 신용카드 확인',sub:'VISA / MASTER 해외 사용 한도 체크'},
+  {cat:'📡 통신',text:'eSIM 또는 유심 구매',sub:'VPN 기능 포함 eSIM 추천'},
+  {cat:'📡 통신',text:'로밍 설정 확인',sub:'통신사 앱에서 자동 로밍 on 확인'},
+  {cat:'🧳 서류·짐',text:'여권 유효기간 확인',sub:'입국일 기준 6개월 이상 남아있어야 함'},
+  {cat:'🧳 서류·짐',text:'항공권·호텔 바우처 저장',sub:'오프라인에서도 볼 수 있게 스크린샷 or PDF'},
+  {cat:'🧳 서류·짐',text:'여행자 보험 가입',sub:'긴급 의료비·휴대품 손해 포함'},
+  {cat:'🧳 서류·짐',text:'보조배터리 준비',sub:'10,000mAh 이상 권장. 기내 수하물로'},
+  {cat:'🧳 서류·짐',text:'포켓티슈 넉넉히 챙기기',sub:'중국 공중화장실 90% 휴지 없음'},
+  {cat:'🧳 서류·짐',text:'얇은 바람막이 챙기기',sub:'칭다오 5월 바닷바람 쌀쌀. 일교차 큼'},
+  {cat:'📋 현지 주의',text:'온라인 입국신고서 작성',sub:'사전 온라인 신고 필수'},
+  {cat:'📋 현지 주의',text:'주요 긴급연락처 저장',sub:'대한민국 영사관 칭다오: +86-532-8897-6001'},
+];
+
+let spots=[], schedule={}, checklist=[];
+let currentArea='전체', currentCat='전체', currentTab='all';
+let editingId=null, openSchPopup=null;
+// 즐겨찾기는 DB 없이 localStorage (기기별 취향이라 OK)
+let favIds = new Set(JSON.parse(localStorage.getItem('favIds')||'[]'));
+function saveFavs(){ localStorage.setItem('favIds',JSON.stringify([...favIds])); }
+
+// ── API helpers ───────────────────────────────────────
+async function api(path, method='GET', body=null){
+  const res = await fetch(`${API}/${path}`, {
+    method,
+    headers: {'Content-Type':'application/json'},
+    body: body ? JSON.stringify(body) : null,
+  });
+  if (!res.ok) throw new Error(await res.text());
+  const t = await res.text();
+  return t ? JSON.parse(t) : null;
+}
+
+// ── 초기 로드 ─────────────────────────────────────────
+async function init(){
+  try {
+    [spots, schedule, checklist] = await Promise.all([
+      api('spots'),
+      api('schedule'),
+      api('checklist'),
+    ]);
+    // 체크리스트 비어있으면 기본값 삽입
+    if (!checklist.length) {
+      for (let i=0; i<DEFAULT_CHK.items.length; i++) {
+        await api('checklist','POST',{...DEFAULT_CHK[i], done:false, sort_order:i});
+      }
+      checklist = await api('checklist');
+    }
+    updateCounts(); render();
+  } catch(e) {
+    document.getElementById('spotList').innerHTML = `<div class="empty">로드 실패: ${e.message}</div>`;
+  }
+}
+
+async function initChecklist(){
+  if (!checklist.length){
+    for (let i=0; i<DEFAULT_CHK.length; i++){
+      await api('checklist','POST',{...DEFAULT_CHK[i],done:false,sort_order:i});
+    }
+    checklist = await api('checklist');
+  }
+}
+
+function totalSch(){ return Object.values(schedule).reduce((n,a)=>n+a.length,0); }
+function totalChkDone(){ return checklist.filter(i=>i.done).length; }
+
+function updateCounts(){
+  document.getElementById('favCount').textContent = spots.filter(s=>favIds.has(s.id)).length;
+  document.getElementById('schCount').textContent = totalSch();
+  document.getElementById('chkCount').textContent = `${totalChkDone()}/${checklist.length}`;
+}
+
+// ── 탭 ───────────────────────────────────────────────
+function switchTab(tab){
+  currentTab=tab; closeSchPopup();
+  document.querySelectorAll('.tab-bar button').forEach((b,i)=>b.classList.toggle('active',['all','fav','sch','chk'][i]===tab));
+  const showFilter = tab==='all'||tab==='fav';
+  document.getElementById('filterSection').style.display = showFilter?'':'none';
+  document.getElementById('resultCount').style.display = showFilter?'':'none';
+  render();
+}
+
+// ── 필터 ─────────────────────────────────────────────
+function filterArea(a){ currentArea=a; document.querySelectorAll('#areaBar button').forEach(b=>b.classList.toggle('active',b.dataset.area===a)); render(); }
+function filterCat(c){ currentCat=c; document.querySelectorAll('#catBar button').forEach(b=>b.classList.toggle('active',b.dataset.cat===c)); render(); }
+function getFiltered(base){
+  let r=base;
+  if(currentArea!=='전체') r=r.filter(s=>(s.area||'기타')===currentArea);
+  if(currentCat!=='전체')  r=r.filter(s=>s.cat===currentCat);
+  return r;
+}
+
+// ── 렌더 ─────────────────────────────────────────────
+function starsStr(n){ return '★'.repeat(n)+'☆'.repeat(5-n); }
+const AREA_LABEL = {'구시가':'🏛 구시가','오사광장권':'🌊 오사광장','타이동':'🍺 타이동','팔대관':'🌿 팔대관','라오산':'⛰ 라오산','외곽':'🚌 외곽','기타':'📌 기타'};
+
+function cardHTML(s){
+  const isFav=favIds.has(s.id);
+  return `<div class="spot-card ${isFav?'is-fav':''}" id="card-${s.id}">
+    <div class="top">
+      <div style="flex:1;min-width:0;">
+        <div class="name">${s.name}</div>
+        ${s.cn?`<div class="cn">${s.cn}</div>`:''}
+        <div class="meta">
+          <span class="badge area">${AREA_LABEL[s.area||'기타']||s.area}</span>
+          <span class="badge cat">${s.cat}</span>
+          <span class="stars">${starsStr(s.stars)}</span>
+        </div>
+        ${s.note?`<div class="note">${s.note}</div>`:''}
+        <div class="card-links">
+          ${s.map?`<a class="map-link" href="${s.map}" target="_blank">🗺 지도</a>`:''}
+          ${s.blog?`<a class="blog-link" href="${s.blog}" target="_blank">📝 블로그</a>`:''}
+        </div>
+      </div>
+      <div class="card-actions">
+        <button class="icon-btn fav-btn ${isFav?'on':''}" onclick="toggleFav(${s.id})">${isFav?'⭐':'☆'}</button>
+        <button class="sch-btn" onclick="toggleSchPopup(${s.id})">📅</button>
+        <button class="icon-btn" onclick="openEdit(${s.id})">✏️</button>
+        <button class="icon-btn danger" onclick="deleteSpot(${s.id})">🗑</button>
+      </div>
+    </div>
+    <div class="sch-popup" id="popup-${s.id}">
+      <select id="pday-${s.id}">${DAYS.map(d=>`<option value="${d.key}">${d.label}</option>`).join('')}</select>
+      <select id="ptime-${s.id}">${TIMES.map(t=>`<option value="${t.key}">${t.label}</option>`).join('')}</select>
+      <button class="confirm-btn" onclick="addToSchedule(${s.id})">추가</button>
+      <button class="cancel-btn" onclick="closeSchPopup()">취소</button>
+    </div>
+  </div>`;
+}
+
+function render(){
+  if(currentTab==='sch'){ renderSchedule(); return; }
+  if(currentTab==='chk'){ renderChecklist(); return; }
+  const list=document.getElementById('spotList');
+  const base=currentTab==='fav'?spots.filter(s=>favIds.has(s.id)):spots;
+  const filtered=getFiltered(base);
+  document.getElementById('resultCount').textContent=`${filtered.length}개`;
+  if(!filtered.length){ list.innerHTML=`<div class="empty">${currentTab==='fav'?'즐겨찾기한 스팟이 없어요.':'조건에 맞는 스팟이 없어요.'}</div>`; return; }
+  list.innerHTML=filtered.map(s=>cardHTML(s)).join('');
+}
+
+// ── 스케줄 팝업 ───────────────────────────────────────
+function toggleSchPopup(id){ if(openSchPopup===id){closeSchPopup();return;} closeSchPopup(); const p=document.getElementById(`popup-${id}`); if(p){p.classList.add('open');openSchPopup=id;} }
+function closeSchPopup(){ if(openSchPopup!==null){const p=document.getElementById(`popup-${openSchPopup}`);if(p)p.classList.remove('open');openSchPopup=null;} }
+
+async function addToSchedule(sid){
+  const day=document.getElementById(`pday-${sid}`).value;
+  const time=document.getElementById(`ptime-${sid}`).value;
+  const key=`${day}_${time}`;
+  if(!schedule[key]) schedule[key]=[];
+  if(schedule[key].length>=MAX_SLOT){showToast('슬롯이 가득 찼어요! (최대 3개)');return;}
+  if(schedule[key].includes(sid)){showToast('이미 추가된 스팟이에요!');return;}
+  await api('schedule','POST',{slot_key:key,spot_id:sid});
+  schedule[key].push(sid);
+  updateCounts(); closeSchPopup();
+  showToast(`📅 ${DAYS.find(x=>x.key===day).label} ${time}에 추가!`);
+}
+
+// ── 스케줄 렌더 ───────────────────────────────────────
+function renderSchedule(){
+  let html='';
+  for(const day of DAYS){
+    html+=`<div class="day-section"><div class="day-label">${day.label}</div><div class="time-slots">`;
+    for(const time of TIMES){
+      const key=`${day.key}_${time.key}`;
+      const items=schedule[key]||[];
+      const isFull=items.length>=MAX_SLOT;
+      let body=items.length?items.map(sid=>{
+        const s=spots.find(x=>x.id===sid); if(!s) return '';
+        return `<div class="slot-item">
+          <div><div class="sname">${s.name}</div><div class="scn">${s.cn||''}</div></div>
+          <div style="display:flex;align-items:center;gap:4px;">
+            <span class="scat">${s.cat}</span><span class="sarea">${s.area||''}</span>
+            <button class="sdel" onclick="removeFromSchedule('${key}',${sid})">✕</button>
+          </div>
+        </div>`;
+      }).join('')+(isFull?`<div class="slot-full">슬롯 가득 (3/3)</div>`:''): `<div class="slot-empty">비어있어요</div>`;
+      html+=`<div class="time-slot"><div class="slot-head"><span class="slot-label">${time.label} <span style="font-size:10px;font-weight:400;color:#bbb;">${time.sub}</span></span><span class="slot-count">${items.length}/3</span></div><div class="slot-items">${body}</div></div>`;
+    }
+    html+=`</div></div>`;
+  }
+  document.getElementById('spotList').innerHTML=html;
+}
+
+async function removeFromSchedule(key,sid){
+  await api(`schedule/${encodeURIComponent(key)}__${sid}`,'DELETE');
+  if(schedule[key]) schedule[key]=schedule[key].filter(x=>x!==sid);
+  if(schedule[key]&&!schedule[key].length) delete schedule[key];
+  updateCounts(); renderSchedule();
+}
+
+// ── 체크리스트 렌더 ───────────────────────────────────
+function renderChecklist(){
+  const done=totalChkDone(),total=checklist.length,pct=total?Math.round(done/total*100):0;
+  let html=`<div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+    <p style="font-size:12px;color:#888;margin-bottom:1rem;text-align:right;">${done}/${total} 완료 (${pct}%)</p>`;
+  const cats=[...new Set(checklist.map(i=>i.cat))];
+  for(const cat of cats){
+    const items=checklist.filter(i=>i.cat===cat);
+    const cd=items.filter(i=>i.done).length;
+    html+=`<div class="chk-section"><div class="chk-section-head"><div class="chk-section-title">${cat}</div><div class="chk-section-progress">${cd}/${items.length}</div></div>
+      <div class="chk-items">${items.map(item=>`
+        <div class="chk-item ${item.done?'done':''}">
+          <div class="chk-checkbox ${item.done?'checked':''}" onclick="toggleChk(${item.id})">${item.done?'✓':''}</div>
+          <div class="chk-content"><div class="chk-text">${item.text}</div>${item.sub?`<div class="chk-sub">${item.sub}</div>`:''}</div>
+          <button class="chk-del" onclick="deleteChk(${item.id})">✕</button>
+        </div>`).join('')}</div></div>`;
+  }
+  html+=`<div style="background:white;border-radius:12px;border:1px solid #eee;padding:1rem;margin-top:.5rem;">
+    <p style="font-size:12px;font-weight:700;margin-bottom:8px;color:#333;">항목 추가</p>
+    <div class="chk-add-row">
+      <input id="chkInput" placeholder="할 일 또는 준비물" onkeydown="if(event.key==='Enter')addChk()" />
+      <select id="chkCat">${CHK_CATS.map(c=>`<option>${c}</option>`).join('')}</select>
+      <button onclick="addChk()">추가</button>
+    </div>
+    <input id="chkSub" placeholder="설명 (선택)" style="margin-top:6px;width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:8px;font-size:12px;font-family:inherit;outline:none;" />
+  </div>`;
+  document.getElementById('spotList').innerHTML=html;
+}
+
+async function toggleChk(id){
+  const item=checklist.find(i=>i.id===id); if(!item) return;
+  item.done=!item.done;
+  await api(`checklist/${id}`,'PUT',{done:item.done});
+  updateCounts(); renderChecklist();
+}
+async function deleteChk(id){
+  await api(`checklist/${id}`,'DELETE');
+  checklist=checklist.filter(i=>i.id!==id);
+  updateCounts(); renderChecklist();
+}
+async function addChk(){
+  const text=document.getElementById('chkInput').value.trim(); if(!text) return;
+  const sub=document.getElementById('chkSub').value.trim();
+  const cat=document.getElementById('chkCat').value;
+  const item=await api('checklist','POST',{cat,text,sub,done:false,sort_order:checklist.length});
+  checklist.push(item);
+  document.getElementById('chkInput').value=''; document.getElementById('chkSub').value='';
+  updateCounts(); renderChecklist(); showToast('항목 추가!');
+}
+
+// ── 즐겨찾기 ─────────────────────────────────────────
+function toggleFav(id){
+  if(favIds.has(id)){favIds.delete(id);showToast('즐겨찾기 해제');}
+  else{favIds.add(id);showToast('⭐ 즐겨찾기 추가!');}
+  saveFavs(); updateCounts(); render();
+}
+
+// ── 스팟 CRUD ─────────────────────────────────────────
+function openAdd(){
+  editingId=null;
+  document.getElementById('modalTitle').textContent='스팟 추가';
+  ['fName','fCn','fMap','fNote'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('fCat').value='맛집'; document.getElementById('fArea').value='구시가'; document.getElementById('fStars').value='5';
+  document.getElementById('overlay').classList.add('open'); document.getElementById('fName').focus();
+}
+function openEdit(id){
+  const s=spots.find(x=>x.id===id); if(!s) return;
+  editingId=id; document.getElementById('modalTitle').textContent='스팟 수정';
+  document.getElementById('fName').value=s.name||''; document.getElementById('fCn').value=s.cn||'';
+  document.getElementById('fCat').value=s.cat||'기타'; document.getElementById('fArea').value=s.area||'기타';
+  document.getElementById('fStars').value=s.stars||3; document.getElementById('fMap').value=s.map||''; document.getElementById('fNote').value=s.note||'';
+  document.getElementById('overlay').classList.add('open');
+}
+function closeModal(){ document.getElementById('overlay').classList.remove('open'); }
+
+async function saveSpot(){
+  const name=document.getElementById('fName').value.trim(); if(!name){alert('이름을 입력해주세요.');return;}
+  const data={name,cn:document.getElementById('fCn').value.trim(),cat:document.getElementById('fCat').value,area:document.getElementById('fArea').value,stars:parseInt(document.getElementById('fStars').value),map:document.getElementById('fMap').value.trim(),note:document.getElementById('fNote').value.trim()};
+  if(editingId){
+    const updated=await api(`spots/${editingId}`,'PUT',data);
+    const idx=spots.findIndex(x=>x.id===editingId); if(idx>=0) spots[idx]={...spots[idx],...data};
+    showToast('수정했어요!');
+  } else {
+    const created=await api('spots','POST',data);
+    spots.push(created);
+    showToast('추가했어요!');
+  }
+  closeModal(); updateCounts(); render();
+}
+
+async function deleteSpot(id){
+  if(!confirm('이 스팟을 삭제할까요?')) return;
+  favIds.delete(id); saveFavs();
+  await api(`spots/${id}`,'DELETE');
+  spots=spots.filter(x=>x.id!==id);
+  updateCounts(); render();
+}
+
+function exportHTML(){ showToast('서버 버전은 HTML 저장 대신 이 URL을 공유하세요!'); }
+
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+init();
+</script>
+</body>
+</html>
