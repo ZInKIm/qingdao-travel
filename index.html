@@ -212,7 +212,7 @@ header .sub { font-size: 11px; color: #999; margin-top: 1px; }
 // API helper — table을 쿼리로 직접 지정
 const API = '/api/spots';
 const DAYS  = [{key:'24',label:'5월 24일 (일)'},{key:'25',label:'5월 25일 (월)'},{key:'26',label:'5월 26일 (화)'},{key:'27',label:'5월 27일 (수)'}];
-const TIMES = [{key:'오전',label:'오전',sub:'09:00~12:00'},{key:'오후',label:'오후',sub:'12:00~17:00'},{key:'저녁',label:'저녁',sub:'17:00~21:00'},{key:'밤',label:'밤',sub:'21:00~24:00'},{key:'새벽',label:'새벽',sub:'00:00~06:00'}];
+const TIMES = [{key:'새벽',label:'새벽',sub:'00:00~06:00'},{key:'오전',label:'오전',sub:'09:00~12:00'},{key:'오후',label:'오후',sub:'12:00~17:00'},{key:'저녁',label:'저녁',sub:'17:00~21:00'},{key:'밤',label:'밤',sub:'21:00~24:00'}];
 const MAX_SLOT = 3;
 const CHK_CATS = ['📱 앱 설치','💳 결제·환전','📡 통신','🧳 서류·짐','📋 현지 주의'];
 const DEFAULT_CHK = [
@@ -389,30 +389,31 @@ async function addToSchedule(sid){
 }
 
 // ── 스케줄 렌더 ───────────────────────────────────────
+let currentSchDay = '24';
+
 function renderSchedule(){
-  let html='';
-  for(const day of DAYS){
-    html+=`<div class="day-section"><div class="day-label">${day.label}</div><div class="time-slots">`;
-    for(const time of TIMES){
-      const key=`${day.key}_${time.key}`;
-      const items=schedule[key]||[];
-      const isFull=items.length>=MAX_SLOT;
-      let body=items.length?items.map(sid=>{
-        const s=spots.find(x=>x.id===sid); if(!s) return '';
-        return `<div class="slot-item">
-          <div><div class="sname">${s.name}</div><div class="scn">${s.cn||''}</div></div>
-          <div style="display:flex;align-items:center;gap:4px;">
-            <span class="scat">${s.cat}</span><span class="sarea">${s.area||''}</span>
-            <button class="sdel" onclick="removeFromSchedule('${key}',${sid})">✕</button>
-          </div>
-        </div>`;
-      }).join('')+(isFull?`<div class="slot-full">슬롯 가득 (3/3)</div>`:''): `<div class="slot-empty">비어있어요</div>`;
-      html+=`<div class="time-slot"><div class="slot-head"><span class="slot-label">${time.label} <span style="font-size:10px;font-weight:400;color:#bbb;">${time.sub}</span></span><span class="slot-count">${items.length}/3</span></div><div class="slot-items">${body}</div></div>`;
-    }
-    html+=`</div></div>`;
+  const day = DAYS.find(x=>x.key===currentSchDay);
+  const dayTabs = DAYS.map(d=>{
+    const active = d.key===currentSchDay;
+    return `<button onclick="selectSchDay('${d.key}')" style="flex:1;padding:10px 4px;font-size:12px;font-weight:600;border:none;border-bottom:2px solid ${active?'#0066cc':'transparent'};background:none;cursor:pointer;color:${active?'#0066cc':'#aaa'};font-family:inherit;">${d.label.replace('5월 ','')}</button>`;
+  }).join('');
+
+  let slotsHtml='';
+  for(const time of TIMES){
+    const key=day.key+'_'+time.key;
+    const items=schedule[key]||[];
+    const isFull=items.length>=MAX_SLOT;
+    let body=items.length?items.map(sid=>{
+      const s=spots.find(x=>x.id===sid); if(!s) return '';
+      return '<div class="slot-item"><div><div class="sname">'+s.name+'</div><div class="scn">'+(s.cn||'')+'</div></div><div style="display:flex;align-items:center;gap:4px;"><span class="scat">'+s.cat+'</span><span class="sarea">'+(s.area||'')+'</span><button class="sdel" onclick="removeFromSchedule(''+key+'','+sid+')">✕</button></div></div>';
+    }).join('')+(isFull?'<div class="slot-full">슬롯 가득 (3/3)</div>':''):'<div class="slot-empty">비어있어요</div>';
+    slotsHtml+='<div class="time-slot"><div class="slot-head"><span class="slot-label">'+time.label+' <span style="font-size:10px;font-weight:400;color:#bbb;">'+time.sub+'</span></span><span class="slot-count">'+items.length+'/3</span></div><div class="slot-items">'+body+'</div></div>';
   }
-  document.getElementById('spotList').innerHTML=html;
+
+  document.getElementById('spotList').innerHTML='<div style="display:flex;background:white;border-radius:12px;border:1px solid #eee;margin-bottom:1rem;overflow:hidden;">'+dayTabs+'</div><div class="time-slots">'+slotsHtml+'</div>';
 }
+
+function selectSchDay(key){ currentSchDay=key; renderSchedule(); }
 
 async function removeFromSchedule(key,sid){
   await api(`schedule/${encodeURIComponent(key)}__${sid}`,'DELETE');
