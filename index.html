@@ -405,7 +405,7 @@ function renderSchedule(){
     const isFull=items.length>=MAX_SLOT;
     let body=items.length?items.map(sid=>{
       const s=spots.find(x=>x.id===sid); if(!s) return '';
-      return '<div class="slot-item"><div><div class="sname">'+s.name+'</div><div class="scn">'+(s.cn||'')+'</div></div><div style="display:flex;align-items:center;gap:4px;"><span class="scat">'+s.cat+'</span><span class="sarea">'+(s.area||'')+'</span><button class="sdel" onclick="removeFromSchedule(''+key+'','+sid+')">✕</button></div></div>';
+      return '<div class="slot-item"><div><div class="sname">'+s.name+'</div><div class="scn">'+(s.cn||'')+'</div></div><div style="display:flex;align-items:center;gap:4px;"><span class="scat">'+s.cat+'</span><span class="sarea">'+(s.area||'')+'</span><button class="sdel" onclick="removeFromSchedule(\'' +key+ '\','+sid+')">✕</button></div></div>';
     }).join('')+(isFull?'<div class="slot-full">슬롯 가득 (3/3)</div>':''):'<div class="slot-empty">비어있어요</div>';
     slotsHtml+='<div class="time-slot"><div class="slot-head"><span class="slot-label">'+time.label+' <span style="font-size:10px;font-weight:400;color:#bbb;">'+time.sub+'</span></span><span class="slot-count">'+items.length+'/3</span></div><div class="slot-items">'+body+'</div></div>';
   }
