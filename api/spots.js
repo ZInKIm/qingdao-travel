@@ -55,23 +55,26 @@ export default async function handler(req, res) {
     if (table === 'schedule') {
       if (req.method === 'GET') {
         const data = await sb('schedule?order=id.asc');
-        // { slot_key: [spot_id, ...] } 형태로 변환
         const map = {};
         for (const row of data) {
           if (!map[row.slot_key]) map[row.slot_key] = [];
-          map[row.slot_key].push(row.spot_id);
+          if (row.spot_id === -1) {
+            map[row.slot_key].push({ type: 'text', text: row.note || '' });
+          } else {
+            map[row.slot_key].push({ type: 'spot', id: row.spot_id });
+          }
         }
         return res.json(map);
       }
       if (req.method === 'POST') {
-        // { slot_key, spot_id } 추가
         const data = await sb('schedule', 'POST', req.body);
         return res.status(201).json(data[0]);
       }
       if (req.method === 'DELETE' && id) {
-        // id = "slot_key__spot_id" 형태
-        const [slot_key, spot_id] = id.split('__');
-        await sb(`schedule?slot_key=eq.${encodeURIComponent(slot_key)}&spot_id=eq.${spot_id}`, 'DELETE');
+        const lastDunder = id.lastIndexOf('__');
+        const slot_key = id.substring(0, lastDunder);
+        const spot_id = id.substring(lastDunder + 2);
+        await sb('schedule?slot_key=eq.'+encodeURIComponent(slot_key)+'&spot_id=eq.'+spot_id+'&limit=1', 'DELETE');
         return res.json({ ok: true });
       }
     }
