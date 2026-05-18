@@ -522,9 +522,17 @@ function renderSchedule(){
         bodyHtml+='<div style="display:flex;align-items:center;gap:4px;flex-shrink:0;"><span class="scat">'+s.cat+'</span>';
         bodyHtml+='<button class="sdel" onclick="removeSchItem(\''+key+'\','+idx+')">✕</button></div></div>';
       } else {
+        const editId='edit-'+key+'-'+idx;
         bodyHtml+='<div class="slot-item" style="background:#fff9e6;border-color:#ffe58f;">';
-        bodyHtml+='<div style="flex:1;font-size:13px;">📝 '+item.text+'</div>';
-        bodyHtml+='<button class="sdel" onclick="removeSchItem(\''+key+'\','+idx+')">✕</button></div>';
+        bodyHtml+='<div id="'+editId+'-view" style="flex:1;display:flex;align-items:center;gap:6px;">';
+        bodyHtml+='<span style="font-size:13px;">📝 '+item.text+'</span>';
+        bodyHtml+='<button data-key="'+key+'" data-idx="'+idx+'" data-text="'+item.text+'" onclick="startEditMemo(this.dataset.key,this.dataset.idx,this.dataset.text)" style="background:none;border:none;color:#bbb;cursor:pointer;font-size:11px;padding:0 2px;">✏️</button>';
+        bodyHtml+='</div>';
+        bodyHtml+='<div id="'+editId+'-input" style="flex:1;display:none;gap:4px;align-items:center;">';
+        bodyHtml+='<input id="'+editId+'" style="flex:1;padding:4px 6px;border:1px solid #f5a623;border-radius:5px;font-size:12px;font-family:inherit;" value="'+item.text+'" data-key="'+key+'" data-idx="'+idx+'" onkeydown="if(event.key===\'Enter\')saveEditMemo(this.dataset.key,this.dataset.idx,this.id)">';
+        bodyHtml+='<button data-key="'+key+'" data-idx="'+idx+'" data-inputid="'+editId+'" onclick="saveEditMemo(this.dataset.key,this.dataset.idx,this.dataset.inputid)" style="padding:4px 8px;background:#f5a623;color:white;border:none;border-radius:5px;font-size:11px;cursor:pointer;white-space:nowrap;">저장</button>';
+        bodyHtml+='</div>';
+        bodyHtml+='<button class="sdel" onclick="removeSchItem(\''+key+'\','+idx+')" style="flex-shrink:0;">✕</button></div>';
       }
     });
     if(isFull) bodyHtml+='<div class="slot-full">가득 (3/3)</div>';
@@ -575,6 +583,27 @@ function renderSchedule(){
 }
 
 function selectSchDay(key){ currentSchDay=key; renderSchedule(); }
+
+function startEditMemo(key,idx,text){
+  const editId='edit-'+key+'-'+idx;
+  const view=document.getElementById(editId+'-view');
+  const input=document.getElementById(editId+'-input');
+  if(view) view.style.display='none';
+  if(input) input.style.display='flex';
+  const el=document.getElementById(editId);
+  if(el){ el.value=text; el.focus(); el.select(); }
+}
+
+async function saveEditMemo(key,idx,inputId){
+  const input=document.getElementById(inputId);
+  const text=input?input.value.trim():''; if(!text) return;
+  const item=schedule[key][idx];
+  // DB 업데이트: 기존 삭제 후 재삽입
+  await api('schedule/'+encodeURIComponent(key)+'__-1','DELETE');
+  await api('schedule','POST',{slot_key:key,spot_id:-1,note:text});
+  schedule[key][idx]={type:'text',text};
+  renderSchedule(); showToast('📝 수정됐어요!');
+}
 
 function toggleAddForm(key){
   const el=document.getElementById('af-'+key);
