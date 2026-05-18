@@ -353,7 +353,7 @@ function cardHTML(s){
     </div>
     <div class="sch-popup" id="popup-${s.id}">
       <select id="pday-${s.id}">${DAYS.map(d=>`<option value="${d.key}">${d.label}</option>`).join('')}</select>
-      <select id="ptime-${s.id}">${TIMES.map(t=>`<option value="${t.key}">${t.label}</option>`).join('')}</select>
+      <select id="ptime-${s.id}">${HOURS.map(h=>`<option value="${h.key}">${h.label}</option>`).join('')}</select>
       <button class="confirm-btn" onclick="addToSchedule(${s.id})">추가</button>
       <button class="cancel-btn" onclick="closeSchPopup()">취소</button>
     </div>
@@ -377,50 +377,19 @@ function closeSchPopup(){ if(openSchPopup!==null){const p=document.getElementByI
 
 async function addToSchedule(sid){
   const day=document.getElementById(`pday-${sid}`).value;
-  const time=document.getElementById(`ptime-${sid}`).value;
-  const key=`${day}_${time}`;
+  const hour=document.getElementById(`ptime-${sid}`).value;
+  const key=`${day}_${hour}`;
   if(!schedule[key]) schedule[key]=[];
   if(schedule[key].length>=MAX_SLOT){showToast('슬롯이 가득 찼어요! (최대 3개)');return;}
-  if(schedule[key].includes(sid)){showToast('이미 추가된 스팟이에요!');return;}
+  if(schedule[key].find(x=>x.type==='spot'&&x.id===sid)){showToast('이미 추가된 스팟이에요!');return;}
   await api('schedule','POST',{slot_key:key,spot_id:sid});
-  schedule[key].push(sid);
+  schedule[key].push({type:'spot',id:sid});
   updateCounts(); closeSchPopup();
-  showToast(`📅 ${DAYS.find(x=>x.key===day).label} ${time}에 추가!`);
+  const d=DAYS.find(x=>x.key===day);
+  showToast(`📅 ${d.label} ${hour}:00에 추가!`);
 }
 
-// ── 스케줄 렌더 ───────────────────────────────────────
-let currentSchDay = '24';
 
-function renderSchedule(){
-  const day = DAYS.find(x=>x.key===currentSchDay);
-  const dayTabs = DAYS.map(d=>{
-    const active = d.key===currentSchDay;
-    return `<button onclick="selectSchDay('${d.key}')" style="flex:1;padding:10px 4px;font-size:12px;font-weight:600;border:none;border-bottom:2px solid ${active?'#0066cc':'transparent'};background:none;cursor:pointer;color:${active?'#0066cc':'#aaa'};font-family:inherit;">${d.label.replace('5월 ','')}</button>`;
-  }).join('');
-
-  let slotsHtml='';
-  for(const time of TIMES){
-    const key=day.key+'_'+time.key;
-    const items=schedule[key]||[];
-    const isFull=items.length>=MAX_SLOT;
-    let body=items.length?items.map(sid=>{
-      const s=spots.find(x=>x.id===sid); if(!s) return '';
-      return '<div class="slot-item"><div><div class="sname">'+s.name+'</div><div class="scn">'+(s.cn||'')+'</div></div><div style="display:flex;align-items:center;gap:4px;"><span class="scat">'+s.cat+'</span><span class="sarea">'+(s.area||'')+'</span><button class="sdel" onclick="removeFromSchedule(\'' +key+ '\','+sid+')">✕</button></div></div>';
-    }).join('')+(isFull?'<div class="slot-full">슬롯 가득 (3/3)</div>':''):'<div class="slot-empty">비어있어요</div>';
-    slotsHtml+='<div class="time-slot"><div class="slot-head"><span class="slot-label">'+time.label+' <span style="font-size:10px;font-weight:400;color:#bbb;">'+time.sub+'</span></span><span class="slot-count">'+items.length+'/3</span></div><div class="slot-items">'+body+'</div></div>';
-  }
-
-  document.getElementById('spotList').innerHTML='<div style="display:flex;background:white;border-radius:12px;border:1px solid #eee;margin-bottom:1rem;overflow:hidden;">'+dayTabs+'</div><div class="time-slots">'+slotsHtml+'</div>';
-}
-
-function selectSchDay(key){ currentSchDay=key; renderSchedule(); }
-
-async function removeFromSchedule(key,sid){
-  await api(`schedule/${encodeURIComponent(key)}__${sid}`,'DELETE');
-  if(schedule[key]) schedule[key]=schedule[key].filter(x=>x!==sid);
-  if(schedule[key]&&!schedule[key].length) delete schedule[key];
-  updateCounts(); renderSchedule();
-}
 
 // ── 체크리스트 렌더 ───────────────────────────────────
 function renderChecklist(){
@@ -521,6 +490,127 @@ async function deleteSpot(id){
 }
 
 function exportHTML(){ showToast('서버 버전은 HTML 저장 대신 이 URL을 공유하세요!'); }
+// ── 스케줄 렌더 ───────────────────────────────────────
+let currentSchDay = '24';
+const HOURS = Array.from({length:24},(_,i)=>String(i).padStart(2,'0'));
+
+function renderSchedule(){
+  const day = DAYS.find(x=>x.key===currentSchDay);
+  const dayTabs = DAYS.map(d=>{
+    const active = d.key===currentSchDay;
+    const cnt = HOURS.reduce((n,h)=>n+(schedule[d.key+'_'+h]||[]).length,0);
+    let btn = '<button onclick="selectSchDay(\''+d.key+'\')" style="flex:1;padding:10px 4px;font-size:11px;font-weight:600;border:none;border-bottom:2px solid '+(active?'#0066cc':'transparent')+';background:none;cursor:pointer;color:'+(active?'#0066cc':'#aaa')+';font-family:inherit;position:relative;">';
+    btn += d.label.replace('5월 ','');
+    if(cnt) btn += '<span style="position:absolute;top:4px;right:4px;background:#0066cc;color:white;font-size:9px;border-radius:999px;padding:1px 4px;">'+cnt+'</span>';
+    btn += '</button>';
+    return btn;
+  }).join('');
+
+  let slotsHtml='';
+  for(const h of HOURS){
+    const key=day.key+'_'+h;
+    const items=schedule[key]||[];
+    const isFull=items.length>=MAX_SLOT;
+    const hasItems=items.length>0;
+
+    let bodyHtml='';
+    items.forEach(function(item,idx){
+      if(item.type==='spot'){
+        const s=spots.find(x=>x.id===item.id); if(!s) return;
+        bodyHtml+='<div class="slot-item">';
+        bodyHtml+='<div style="flex:1;min-width:0;"><div class="sname">'+s.name+'</div><div class="scn">'+(s.cn||'')+'</div></div>';
+        bodyHtml+='<div style="display:flex;align-items:center;gap:4px;flex-shrink:0;"><span class="scat">'+s.cat+'</span>';
+        bodyHtml+='<button class="sdel" onclick="removeSchItem(\''+key+'\','+idx+')">✕</button></div></div>';
+      } else {
+        bodyHtml+='<div class="slot-item" style="background:#fff9e6;border-color:#ffe58f;">';
+        bodyHtml+='<div style="flex:1;font-size:13px;">📝 '+item.text+'</div>';
+        bodyHtml+='<button class="sdel" onclick="removeSchItem(\''+key+'\','+idx+')">✕</button></div>';
+      }
+    });
+    if(isFull) bodyHtml+='<div class="slot-full">가득 (3/3)</div>';
+
+    // 추가 폼 — onclick은 data-key 속성 활용으로 escape 문제 우회
+    const addFormId='af-'+key;
+    const tiId='ti-'+key;
+    const ssId='ss-'+key;
+
+    let addForm='<div id="'+addFormId+'" style="display:none;padding:8px;border-top:1px solid #f0f0f0;">';
+    addForm+='<div style="display:flex;gap:4px;margin-bottom:6px;">';
+    addForm+='<input id="'+tiId+'" placeholder="메모, 이동수단 등 직접입력" style="flex:1;padding:5px 8px;border:1px solid #ddd;border-radius:6px;font-size:12px;font-family:inherit;" data-key="'+key+'" onkeydown="if(event.key===\'Enter\')addTextItem(this.dataset.key)">';
+    addForm+='<button data-key="'+key+'" onclick="addTextItem(this.dataset.key)" style="padding:5px 10px;background:#f5a623;color:white;border:none;border-radius:6px;font-size:12px;cursor:pointer;white-space:nowrap;font-family:inherit;">+ 메모</button>';
+    addForm+='</div>';
+    addForm+='<div style="display:flex;gap:4px;">';
+    addForm+='<select id="'+ssId+'" style="flex:1;padding:5px 8px;border:1px solid #ddd;border-radius:6px;font-size:12px;font-family:inherit;">';
+    addForm+='<option value="">-- 스팟 선택 --</option>';
+    addForm+=spots.map(s=>'<option value="'+s.id+'">'+s.name+(s.area?' ('+s.area+')':'')+'</option>').join('');
+    addForm+='</select>';
+    addForm+='<button data-key="'+key+'" onclick="addSpotItem(this.dataset.key)" style="padding:5px 10px;background:#0066cc;color:white;border:none;border-radius:6px;font-size:12px;cursor:pointer;white-space:nowrap;font-family:inherit;">+ 스팟</button>';
+    addForm+='</div></div>';
+
+    slotsHtml+='<div class="time-slot" style="'+(hasItems?'':'opacity:0.45')+'">';
+    slotsHtml+='<div class="slot-head" style="cursor:pointer;" data-key="'+key+'" onclick="toggleAddForm(this.dataset.key)">';
+    slotsHtml+='<span class="slot-label" style="font-size:13px;font-weight:700;">'+h+':00</span>';
+    slotsHtml+='<span style="display:flex;align-items:center;gap:6px;">';
+    if(hasItems) slotsHtml+='<span class="slot-count">'+items.length+'/3</span>';
+    if(!isFull) slotsHtml+='<span style="font-size:11px;color:#0066cc;">+ 추가</span>';
+    slotsHtml+='</span></div>';
+    if(hasItems) slotsHtml+='<div class="slot-items">'+bodyHtml+'</div>';
+    slotsHtml+=addForm+'</div>';
+  }
+
+  document.getElementById('spotList').innerHTML=
+    '<div style="display:flex;background:white;border-radius:12px;border:1px solid #eee;margin-bottom:1rem;overflow:hidden;">'+dayTabs+'</div>'
+    +'<div class="time-slots">'+slotsHtml+'</div>';
+}
+
+function selectSchDay(key){ currentSchDay=key; renderSchedule(); }
+
+function toggleAddForm(key){
+  const el=document.getElementById('af-'+key);
+  if(el){ el.style.display=el.style.display==='none'?'block':'none'; }
+}
+
+async function addTextItem(key){
+  const input=document.getElementById('ti-'+key);
+  const text=input.value.trim(); if(!text) return;
+  if(!schedule[key]) schedule[key]=[];
+  if(schedule[key].length>=MAX_SLOT){showToast('슬롯이 가득 찼어요!');return;}
+  await api('schedule','POST',{slot_key:key,spot_id:-1,note:text});
+  schedule[key].push({type:'text',text:text});
+  input.value='';
+  updateCounts(); renderSchedule(); showToast('📝 메모 추가!');
+}
+
+async function addSpotItem(key){
+  const sel=document.getElementById('ss-'+key);
+  const sid=parseInt(sel.value); if(!sid) return;
+  if(!schedule[key]) schedule[key]=[];
+  if(schedule[key].length>=MAX_SLOT){showToast('슬롯이 가득 찼어요!');return;}
+  if(schedule[key].find(function(x){return x.type==='spot'&&x.id===sid;})){showToast('이미 추가된 스팟!');return;}
+  await api('schedule','POST',{slot_key:key,spot_id:sid});
+  schedule[key].push({type:'spot',id:sid});
+  sel.value='';
+  updateCounts(); renderSchedule();
+  const s=spots.find(x=>x.id===sid);
+  showToast('📅 '+s.name+' 추가!');
+}
+
+async function removeSchItem(key,idx){
+  const item=schedule[key][idx];
+  const delId=item.type==='spot'?item.id:-1;
+  await api('schedule/'+encodeURIComponent(key)+'__'+delId,'DELETE');
+  schedule[key].splice(idx,1);
+  if(!schedule[key].length) delete schedule[key];
+  updateCounts(); renderSchedule();
+}
+
+async function removeFromSchedule(key,sid){
+  await api('schedule/'+encodeURIComponent(key)+'__'+sid,'DELETE');
+  if(schedule[key]) schedule[key]=schedule[key].filter(function(x){return !(x.type==='spot'&&x.id===sid);});
+  if(schedule[key]&&!schedule[key].length) delete schedule[key];
+  updateCounts(); renderSchedule();
+}
+
 
 function showToast(msg){
   const t=document.getElementById('toast');
