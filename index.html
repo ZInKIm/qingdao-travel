@@ -492,13 +492,13 @@ async function deleteSpot(id){
 function exportHTML(){ showToast('서버 버전은 HTML 저장 대신 이 URL을 공유하세요!'); }
 // ── 스케줄 렌더 ───────────────────────────────────────
 let currentSchDay = '24';
-const HOURS = Array.from({length:24},(_,i)=>String(i).padStart(2,'0'));
+const HOURS = Array.from({length:24},(_,i)=>({key:String(i).padStart(2,'0'),label:String(i).padStart(2,'0')+':00'}));
 
 function renderSchedule(){
   const day = DAYS.find(x=>x.key===currentSchDay);
   const dayTabs = DAYS.map(d=>{
     const active = d.key===currentSchDay;
-    const cnt = HOURS.reduce((n,h)=>n+(schedule[d.key+'_'+h]||[]).length,0);
+    const cnt = HOURS.reduce((n,h)=>n+(schedule[d.key+'_'+h.key]||[]).length,0);
     let btn = '<button onclick="selectSchDay(\''+d.key+'\')" style="flex:1;padding:10px 4px;font-size:11px;font-weight:600;border:none;border-bottom:2px solid '+(active?'#0066cc':'transparent')+';background:none;cursor:pointer;color:'+(active?'#0066cc':'#aaa')+';font-family:inherit;position:relative;">';
     btn += d.label.replace('5월 ','');
     if(cnt) btn += '<span style="position:absolute;top:4px;right:4px;background:#0066cc;color:white;font-size:9px;border-radius:999px;padding:1px 4px;">'+cnt+'</span>';
@@ -508,7 +508,7 @@ function renderSchedule(){
 
   let slotsHtml='';
   for(const h of HOURS){
-    const key=day.key+'_'+h;
+    const key=day.key+'_'+h.key;
     const items=schedule[key]||[];
     const isFull=items.length>=MAX_SLOT;
     const hasItems=items.length>0;
@@ -534,22 +534,33 @@ function renderSchedule(){
     const tiId='ti-'+key;
     const ssId='ss-'+key;
 
-    let addForm='<div id="'+addFormId+'" style="display:none;padding:8px;border-top:1px solid #f0f0f0;">';
-    addForm+='<div style="display:flex;gap:4px;margin-bottom:6px;">';
-    addForm+='<input id="'+tiId+'" placeholder="메모, 이동수단 등 직접입력" style="flex:1;padding:5px 8px;border:1px solid #ddd;border-radius:6px;font-size:12px;font-family:inherit;" data-key="'+key+'" onkeydown="if(event.key===\'Enter\')addTextItem(this.dataset.key)">';
-    addForm+='<button data-key="'+key+'" onclick="addTextItem(this.dataset.key)" style="padding:5px 10px;background:#f5a623;color:white;border:none;border-radius:6px;font-size:12px;cursor:pointer;white-space:nowrap;font-family:inherit;">+ 메모</button>';
+    let addForm='<div id="'+addFormId+'" style="display:none;border-top:1px solid #f0f0f0;">';
+    addForm+='<div style="display:flex;border-bottom:1px solid #eee;">';
+    addForm+='<button data-key="'+key+'" onclick="switchSchTab(this.dataset.key,\'memo\')" id="tab-memo-'+key+'" style="flex:1;padding:7px;font-size:12px;font-weight:600;border:none;background:none;cursor:pointer;color:#f5a623;border-bottom:2px solid #f5a623;font-family:inherit;">📝 메모</button>';
+    addForm+='<button data-key="'+key+'" onclick="switchSchTab(this.dataset.key,\'spot\')" id="tab-spot-'+key+'" style="flex:1;padding:7px;font-size:12px;font-weight:600;border:none;background:none;cursor:pointer;color:#aaa;border-bottom:2px solid transparent;font-family:inherit;">📍 스팟</button>';
     addForm+='</div>';
-    addForm+='<div style="display:flex;gap:4px;">';
-    addForm+='<select id="'+ssId+'" style="flex:1;padding:5px 8px;border:1px solid #ddd;border-radius:6px;font-size:12px;font-family:inherit;">';
+    addForm+='<div id="panel-memo-'+key+'" style="padding:8px;display:flex;gap:4px;">';
+    addForm+='<input id="'+tiId+'" placeholder="인천→칭다오, 호텔 체크인, 이동 등" style="flex:1;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:12px;font-family:inherit;" data-key="'+key+'" onkeydown="if(event.key===\'Enter\')addTextItem(this.dataset.key)">';
+    addForm+='<button data-key="'+key+'" onclick="addTextItem(this.dataset.key)" style="padding:6px 12px;background:#f5a623;color:white;border:none;border-radius:6px;font-size:12px;cursor:pointer;white-space:nowrap;font-family:inherit;">추가</button>';
+    addForm+='</div>';
+    addForm+='<div id="panel-spot-'+key+'" style="padding:8px;display:none;">';
+    addForm+='<select id="'+ssId+'" style="width:100%;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:12px;font-family:inherit;margin-bottom:6px;">';
     addForm+='<option value="">-- 스팟 선택 --</option>';
-    addForm+=spots.map(s=>'<option value="'+s.id+'">'+s.name+(s.area?' ('+s.area+')':'')+'</option>').join('');
+    const areas=['구시가','오사광장권','타이동','팔대관','라오산','외곽','기타'];
+    areas.forEach(function(area){
+      const aSpots=spots.filter(function(s){return s.area===area;});
+      if(!aSpots.length) return;
+      addForm+='<optgroup label="'+area+'">';
+      addForm+=aSpots.map(function(s){return '<option value="'+s.id+'">'+s.name+'</option>';}).join('');
+      addForm+='</optgroup>';
+    });
     addForm+='</select>';
-    addForm+='<button data-key="'+key+'" onclick="addSpotItem(this.dataset.key)" style="padding:5px 10px;background:#0066cc;color:white;border:none;border-radius:6px;font-size:12px;cursor:pointer;white-space:nowrap;font-family:inherit;">+ 스팟</button>';
+    addForm+='<button data-key="'+key+'" onclick="addSpotItem(this.dataset.key)" style="width:100%;padding:6px;background:#0066cc;color:white;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit;">+ 스팟 추가</button>';
     addForm+='</div></div>';
 
     slotsHtml+='<div class="time-slot" style="'+(hasItems?'':'opacity:0.45')+'">';
     slotsHtml+='<div class="slot-head" style="cursor:pointer;" data-key="'+key+'" onclick="toggleAddForm(this.dataset.key)">';
-    slotsHtml+='<span class="slot-label" style="font-size:13px;font-weight:700;">'+h+':00</span>';
+    slotsHtml+='<span class="slot-label" style="font-size:13px;font-weight:700;">'+h.label+'</span>';
     slotsHtml+='<span style="display:flex;align-items:center;gap:6px;">';
     if(hasItems) slotsHtml+='<span class="slot-count">'+items.length+'/3</span>';
     if(!isFull) slotsHtml+='<span style="font-size:11px;color:#0066cc;">+ 추가</span>';
@@ -568,6 +579,23 @@ function selectSchDay(key){ currentSchDay=key; renderSchedule(); }
 function toggleAddForm(key){
   const el=document.getElementById('af-'+key);
   if(el){ el.style.display=el.style.display==='none'?'block':'none'; }
+}
+
+function switchSchTab(key,tab){
+  const memo=document.getElementById('panel-memo-'+key);
+  const spot=document.getElementById('panel-spot-'+key);
+  const tMemo=document.getElementById('tab-memo-'+key);
+  const tSpot=document.getElementById('tab-spot-'+key);
+  if(!memo||!spot) return;
+  if(tab==='memo'){
+    memo.style.display='flex'; spot.style.display='none';
+    tMemo.style.color='#f5a623'; tMemo.style.borderBottom='2px solid #f5a623';
+    tSpot.style.color='#aaa'; tSpot.style.borderBottom='2px solid transparent';
+  } else {
+    memo.style.display='none'; spot.style.display='block';
+    tSpot.style.color='#0066cc'; tSpot.style.borderBottom='2px solid #0066cc';
+    tMemo.style.color='#aaa'; tMemo.style.borderBottom='2px solid transparent';
+  }
 }
 
 async function addTextItem(key){
